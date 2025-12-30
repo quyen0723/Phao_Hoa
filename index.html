@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>🎆 Pháo Hoa Sài Gòn - AI Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Cinzel', serif;
+            touch-action: none;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #000000;
+            transition: background-color 0.3s;
+        }
+
+        .canvas-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            mix-blend-mode: lighten;
+        }
+
+        #city-canvas {
+            mix-blend-mode: normal;
+            z-index: 1;
+        }
+
+        #trails-canvas {
+            z-index: 2;
+        }
+
+        #main-canvas {
+            z-index: 3;
+            cursor: crosshair;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            pointer-events: none;
+            text-align: center;
+            padding-top: 25px;
+        }
+
+        h1 {
+            font-size: clamp(24px, 5vw, 48px);
+            font-weight: 700;
+            letter-spacing: 6px;
+            background: linear-gradient(180deg, #fff 0%, #ffd700 50%, #ff8c00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 60px rgba(255, 215, 0, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: clamp(14px, 2.5vw, 22px);
+            color: rgba(255, 215, 0, 0.8);
+            letter-spacing: 12px;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 95%;
+            max-width: 600px;
+            align-items: center;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            color: rgba(255, 215, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(4px);
+        }
+
+        .btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: rgba(255, 215, 0, 0.6);
+            color: #fff;
+        }
+
+        .btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+            color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        #finale-btn { border-color: #ff4444; color: #ff8888; }
+        #finale-btn.active { background: rgba(255, 68, 68, 0.3); border-color: #ff4444; color: #ffcccc; box-shadow: 0 0 15px rgba(255, 68, 68, 0.4); }
+
+        /* AI Button Styling */
+        #ai-btn {
+            border-color: #00ffff;
+            color: #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+        #ai-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+
+        .info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            font-family: monospace;
+            z-index: 20;
+            text-align: right;
+            pointer-events: none;
+        }
+
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a1628 0%, #1a3a5a 50%, #d4956a 100%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s ease-out;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-top-color: #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-text {
+            color: #ffd700;
+            font-size: 14px;
+            letter-spacing: 4px;
+            margin-top: 20px;
+            text-transform: uppercase;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { opacity: 0; pointer-events: none; }
+        
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .btn { padding: 6px 8px; font-size: 10px; }
+            .subtitle { letter-spacing: 4px; }
+        }
+
+        /* AI Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 90;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .ai-modal {
+            background: rgba(10, 20, 30, 0.95);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            width: 90%;
+            max-width: 450px;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .modal-overlay.open .ai-modal { transform: translateY(0); }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .modal-title {
+            color: #00ffff;
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .close-btn {
+            background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            font-family: 'Cinzel', serif;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        }
+
+        .tab-content { display: none; flex-direction: column; gap: 12px; }
+        .tab-content.active { display: flex; }
+
+        .ai-input {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: none;
+            height: 80px;
+        }
+        .ai-input:focus { outline: none; border-color: #00ffff; }
+
+        .generate-btn {
+            background: linear-gradient(90deg, #008888 0%, #00ffff 100%);
+            border: none;
+            color: #000;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .spinner-small {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(0,0,0,0.3); border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .result-area {
+            min-height: 40px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 13px;
+            color: #ffd700;
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'Dancing Script', cursive;
+            font-size: 18px;
+            line-height: 1.4;
+            display: none;
+        }
+        .result-area.visible { display: block; }
+        
+        .toast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.9); border: 1px solid #00ffff;
+            padding: 10px 20px; border-radius: 20px; color: #00ffff;
+            z-index: 100; opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; font-size: 14px; text-align: center;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Chuẩn bị pháo hoa...</div>
+    </div>
+
+    <!-- AI Modal -->
+    <div class="modal-overlay" id="ai-modal-overlay">
+        <div class="ai-modal">
+            <div class="modal-header">
+                <div class="modal-title">✨ AI Magic</div>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="director">Director</button>
+                <button class="tab-btn" data-tab="wishes">Lời Chúc</button>
+            </div>
+
+            <!-- Director Tab -->
+            <div class="tab-content active" id="tab-director">
+                <p style="color: #aaa; font-size: 12px;">Mô tả màn trình diễn pháo hoa bạn muốn xem.</p>
+                <textarea class="ai-input" id="director-input" placeholder="Ví dụ: Một màn trình diễn lãng mạn với màu hồng và nhẫn cưới, kết thúc bằng mưa vàng..."></textarea>
+                <button class="generate-btn" id="director-submit">
+                    <span>🎬 ACTION</span>
+                </button>
+            </div>
+
+            <!-- Wishes Tab -->
+            <div class="tab-content" id="tab-wishes">
+                <p style="color: #aaa; font-size: 12px;">Nhập tên người nhận để AI viết lời chúc Tết.</p>
+                <input type="text" class="ai-input" id="wish-input" style="height: 40px;" placeholder="Ví dụ: Bà ngoại, Người yêu, Sếp...">
+                <button class="generate-btn" id="wish-submit">
+                    <span>✨ Tạo Lời Chúc</span>
+                </button>
+                <div class="result-area" id="wish-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Đang tải dữ liệu từ vũ trụ AI...</div>
+
+    <div class="container">
+        <div class="canvas-container" id="canvas-container">
+            <canvas id="city-canvas"></canvas>
+            <canvas id="trails-canvas"></canvas>
+            <canvas id="main-canvas"></canvas>
+        </div>
+
+        <div class="ui-layer">
+            <h1>CHÚC MỪNG NĂM MỚI</h1>
+            <div class="subtitle">2 0 2 6</div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <button class="btn" data-shell="Random">🎲 Random</button>
+                <button class="btn" data-shell="Crysanthemum">🌸 Cúc</button>
+                <button class="btn" data-shell="Willow">🌿 Liễu</button>
+                <button class="btn" data-shell="Palm">🌴 Cọ</button>
+            </div>
+            <div class="control-row">
+                <button class="btn" data-shell="Ring">⭕ Vòng</button>
+                <button class="btn" data-shell="Crossette">✨ Crossette</button>
+                <button class="btn" data-shell="Crackle">💥 Crackle</button>
+                <button class="btn" data-shell="Strobe">⚡ Strobe</button>
+            </div>
+            <div class="control-row">
+                <button class="btn" data-shell="Ghost">👻 Ghost</button>
+                <button class="btn" data-shell="Horsetail">🐴 Horsetail</button>
+                <button class="btn" data-shell="Floral">🌺 Floral</button>
+                <button class="btn" id="finale-btn">🎆 FINALE!</button>
+            </div>
+            <div class="control-row">
+                <button class="btn" id="ai-btn">✨ AI Magic ✨</button>
+            </div>
+        </div>
+
+        <div class="info">
+            <div id="fps">FPS: --</div>
+            <div id="particles">Particles: 0</div>
+        </div>
+    </div>
+
+    <script>
+    'use strict';
+    
+    // ==================== GEMINI API SETUP ====================
+    const apiKey = ""; // Set by environment
+    
+    async function callGemini(prompt, isJson = false) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }]
+        };
+
+        if (isJson) {
+            payload.generationConfig = { responseMimeType: "application/json" };
+        }
+
+        let retries = 0;
+        const maxRetries = 3;
+        
+        while (retries < maxRetries) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!text) throw new Error("No text generated");
+                
+                return text;
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                retries++;
+                if (retries >= maxRetries) throw error;
+                await new Promise(r => setTimeout(r, 1000 * retries)); // Linear backoff
+            }
+        }
+    }
+
+    // ==================== AI UI LOGIC ====================
+    const modalOverlay = document.getElementById('ai-modal-overlay');
+    const openAiBtn = document.getElementById('ai-btn');
+    const closeModalBtn = document.getElementById('close-modal');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg, duration=3000) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    openAiBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
+    closeModalBtn.addEventListener('click', () => modalOverlay.classList.remove('open'));
+    modalOverlay.addEventListener('click', (e) => {
+        if(e.target === modalOverlay) modalOverlay.classList.remove('open');
+    });
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+    });
+
+    // --- DIRECTOR LOGIC ---
+    const directorSubmit = document.getElementById('director-submit');
+    const directorInput = document.getElementById('director-input');
+
+    directorSubmit.addEventListener('click', async () => {
+        const userInput = directorInput.value.trim();
+        if (!userInput) return;
+
+        directorSubmit.disabled = true;
+        directorSubmit.innerHTML = '<div class="spinner-small"></div> Đang đạo diễn...';
+        
+        const systemPrompt = `
+        You are a fireworks show choreographer. Create a JSON sequence based on this user description: "${userInput}".
+        
+        Available Shell Types: Crysanthemum, Willow, Palm, Ring, Crossette, Crackle, Strobe, Ghost, Horsetail, Floral.
+        Available Colors: Red, Green, Blue, Purple, Gold, White, Pink, Orange, Cyan, Random.
+        
+        Output strictly a JSON Array of objects. No markdown.
+        Schema per object:
+        {
+            "type": string (one of the available types),
+            "color": string (one of the available colors),
+            "count": number (1 to 5, how many to fire at once),
+            "delay": number (milliseconds to wait AFTER this burst before the next one. range 100-2000)
+        }
+        
+        Make the sequence interesting but limit to 10-15 steps max.
+        `;
+
+        try {
+            const jsonStr = await callGemini(systemPrompt, true);
+            const sequence = JSON.parse(jsonStr);
+            
+            modalOverlay.classList.remove('open');
+            showToast(`🎬 Đang trình diễn: ${userInput}`);
+            playSequence(sequence);
+            
+        } catch (e) {
+            showToast("Lỗi kết nối đạo diễn AI! Thử lại sau.");
+        } finally {
+            directorSubmit.disabled = false;
+            directorSubmit.innerHTML = '<span>🎬 ACTION</span>';
+        }
+    });
+
+    function playSequence(sequence) {
+        let currentTime = 0;
+        sequence.forEach(step => {
+            setTimeout(() => {
+                for(let i=0; i<step.count; i++) {
+                    // Random slight offset for simultaneous shots
+                    setTimeout(() => {
+                        const x = 0.2 + Math.random() * 0.6;
+                        const y = 0.3 + Math.random() * 0.4;
+                        launchSpecificShell(step.type, step.color, x, y);
+                    }, Math.random() * 200);
+                }
+            }, currentTime);
+            currentTime += step.delay;
+        });
+    }
+
+    function launchSpecificShell(type, colorName, x, y) {
+        let size = 2 + Math.random() * 2;
+        // Map color name to hex
+        let colorHex = COLOR[colorName] || 'random';
+        if (colorName === 'Random') colorHex = 'random';
+        
+        // Create shell with specific overrides
+        // We need to fetch the base config for the type, then override color
+        const baseConfig = shellTypes[type] ? shellTypes[type](size) : shellTypes['Random'](size);
+        
+        // Override color if valid
+        if (colorHex !== 'random') {
+            baseConfig.color = colorHex;
+            // Adjust secondary colors for specific shells to match
+            if (baseConfig.pistilColor) baseConfig.pistilColor = whiteOrGold();
+            if (baseConfig.glitterColor) baseConfig.glitterColor = colorHex;
+        }
+
+        const shell = new Shell(baseConfig);
+        shell.launch(x, y);
+    }
+
+    // --- WISH LOGIC ---
+    const wishSubmit = document.getElementById('wish-submit');
+    const wishInput = document.getElementById('wish-input');
+    const wishResult = document.getElementById('wish-result');
+
+    wishSubmit.addEventListener('click', async () => {
+        const recipient = wishInput.value.trim();
+        if (!recipient) return;
+
+        wishSubmit.disabled = true;
+        wishSubmit.innerHTML = '<div class="spinner-small"></div> Đang viết...';
+        wishResult.classList.remove('visible');
+
+        const prompt = `Write a short, heart-warming, poetic New Year wish (in Vietnamese) for: ${recipient}. Keep it under 200 characters. Emojis allowed.`;
+
+        try {
+            const text = await callGemini(prompt);
+            typeWriter(text, wishResult);
+            wishResult.classList.add('visible');
+            
+            // Launch a celebratory firework
+            launchSpecificShell('Ring', 'Gold', 0.5, 0.5);
+            
+        } catch (e) {
+            wishResult.textContent = "Không thể tạo lời chúc lúc này.";
+            wishResult.classList.add('visible');
+        } finally {
+            wishSubmit.disabled = false;
+            wishSubmit.innerHTML = '<span>✨ Tạo Lời Chúc</span>';
+        }
+    });
+
+    function typeWriter(text, element) {
+        element.textContent = '';
+        let i = 0;
+        const speed = 30;
+        function type() {
+            if (i < text.length) {
+                element.textContent += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            }
+        }
+        type();
+    }
+
+
+    // ==================== CONFIGURATION ====================
+    const IS_MOBILE = window.innerWidth <= 640;
+    const GRAVITY = 0.9;
+    const PI_2 = Math.PI * 2;
+    const PI_HALF = Math.PI * 0.5;
+
+    const COLOR = {
+        Red: '#ff0043',
+        Green: '#14fc56',
+        Blue: '#1e7fff',
+        Purple: '#e60aff',
+        Gold: '#ffbf36',
+        White: '#ffffff',
+        Pink: '#ff69b4',
+        Orange: '#ff8c00',
+        Cyan: '#00ffff'
+    };
+
+    const INVISIBLE = '_INVISIBLE_';
+    const COLOR_NAMES = Object.keys(COLOR);
+    const COLOR_CODES = COLOR_NAMES.map(name => COLOR[name]);
+    const COLOR_CODES_W_INVIS = [...COLOR_CODES, INVISIBLE];
+
+    // Pre-compute color tuples for sky lighting
+    const COLOR_TUPLES = {};
+    COLOR_CODES.forEach(hex => {
+        COLOR_TUPLES[hex] = {
+            r: parseInt(hex.substr(1, 2), 16),
+            g: parseInt(hex.substr(3, 2), 16),
+            b: parseInt(hex.substr(5, 2), 16)
+        };
+    });
+
+    // ==================== CANVAS SETUP ====================
+    const cityCanvas = document.getElementById('city-canvas');
+    const trailsCanvas = document.getElementById('trails-canvas');
+    const mainCanvas = document.getElementById('main-canvas');
+    const cityCtx = cityCanvas.getContext('2d');
+    const trailsCtx = trailsCanvas.getContext('2d');
+    const mainCtx = mainCanvas.getContext('2d');
+    const canvasContainer = document.getElementById('canvas-container');
+
+    let width, height, scale;
+
+    function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        scale = IS_MOBILE ? 0.9 : 1;
+
+        [cityCanvas, trailsCanvas, mainCanvas].forEach(canvas => {
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            canvas.getContext('2d').scale(dpr, dpr);
+        });
+
+        drawCity();
+    }
+
+    // ==================== UTILITIES ====================
+    const MyMath = {
+        random: (min, max) => Math.random() * (max - min) + min,
+        randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+        randomChoice: (arr) => arr[Math.floor(Math.random() * arr.length)],
+        clamp: (val, min, max) => Math.max(min, Math.min(max, val)),
+        pointDist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
+        pointAngle: (x1, y1, x2, y2) => Math.atan2(y2 - y1, x2 - x1)
+    };
+
+    function randomColor(options = {}) {
+        let color = MyMath.randomChoice(COLOR_CODES);
+        if (options.limitWhite && color === COLOR.White && Math.random() < 0.6) {
+            color = MyMath.randomChoice(COLOR_CODES);
+        }
+        if (options.notColor) {
+            while (color === options.notColor) {
+                color = MyMath.randomChoice(COLOR_CODES);
+            }
+        }
+        return color;
+    }
+
+    function whiteOrGold() {
+        return Math.random() < 0.5 ? COLOR.Gold : COLOR.White;
+    }
+
+    // ==================== PARTICLE POOLS ====================
+    function createParticleCollection() {
+        const collection = {};
+        COLOR_CODES_W_INVIS.forEach(color => collection[color] = []);
+        return collection;
+    }
+
+    // ==================== STAR CLASS ====================
+    const Star = {
+        drawWidth: 3,
+        airDrag: 0.98,
+        airDragHeavy: 0.992,
+        active: createParticleCollection(),
+        _pool: [],
+
+        add(x, y, color, angle, speed, life, speedOffX = 0, speedOffY = 0) {
+            const star = this._pool.pop() || {};
+            
+            star.visible = true;
+            star.heavy = false;
+            star.x = x;
+            star.y = y;
+            star.prevX = x;
+            star.prevY = y;
+            star.color = color;
+            star.speedX = Math.sin(angle) * speed + speedOffX;
+            star.speedY = Math.cos(angle) * speed + speedOffY;
+            star.life = life;
+            star.fullLife = life;
+            star.sparkFreq = 0;
+            star.sparkSpeed = 1;
+            star.sparkTimer = 0;
+            star.sparkColor = color;
+            star.sparkLife = 750;
+            star.sparkLifeVariation = 0.25;
+            star.strobe = false;
+            star.transitionTime = 0;
+            star.secondColor = null;
+            star.colorChanged = false;
+            star.onDeath = null;
+
+            this.active[color].push(star);
+            return star;
+        },
+
+        returnInstance(star) {
+            if (star.onDeath) star.onDeath(star);
+            star.onDeath = null;
+            star.secondColor = null;
+            star.transitionTime = 0;
+            star.colorChanged = false;
+            this._pool.push(star);
+        }
+    };
+
+    // ==================== SPARK CLASS ====================
+    const Spark = {
+        drawWidth: 1,
+        airDrag: 0.9,
+        active: createParticleCollection(),
+        _pool: [],
+
+        add(x, y, color, angle, speed, life) {
+            const spark = this._pool.pop() || {};
+            
+            spark.x = x;
+            spark.y = y;
+            spark.prevX = x;
+            spark.prevY = y;
+            spark.color = color;
+            spark.speedX = Math.sin(angle) * speed;
+            spark.speedY = Math.cos(angle) * speed;
+            spark.life = life;
+
+            this.active[color].push(spark);
+            return spark;
+        },
+
+        returnInstance(spark) {
+            this._pool.push(spark);
+        }
+    };
+
+    // ==================== BURST FLASH ====================
+    const BurstFlash = {
+        active: [],
+        _pool: [],
+
+        add(x, y, radius) {
+            const flash = this._pool.pop() || {};
+            flash.x = x;
+            flash.y = y;
+            flash.radius = radius;
+            this.active.push(flash);
+        },
+
+        returnInstance(flash) {
+            this._pool.push(flash);
+        }
+    };
+
+    // ==================== SHELL TYPES ====================
+    function makePistilColor(shellColor) {
+        return (shellColor === COLOR.White || shellColor === COLOR.Gold) 
+            ? randomColor({ notColor: shellColor }) 
+            : whiteOrGold();
+    }
+
+    const shellTypes = {
+        'Crysanthemum': (size = 1) => {
+            const glitter = Math.random() < 0.25;
+            const singleColor = Math.random() < 0.72;
+            const color = singleColor ? randomColor({ limitWhite: true }) : [randomColor(), randomColor()];
+            const pistil = singleColor && Math.random() < 0.42;
+            const pistilColor = pistil && makePistilColor(color);
+            const secondColor = singleColor && Math.random() < 0.2 ? pistilColor || randomColor({ notColor: color }) : null;
+            return {
+                shellSize: size,
+                spreadSize: 300 + size * 100,
+                starLife: 900 + size * 200,
+                starDensity: glitter ? 1.1 : 1.25,
+                color,
+                secondColor,
+                glitter: glitter ? 'light' : '',
+                glitterColor: whiteOrGold(),
+                pistil,
+                pistilColor,
+                streamers: !pistil && color !== COLOR.White && Math.random() < 0.42
+            };
+        },
+
+        'Willow': (size = 1) => ({
+            shellSize: size,
+            spreadSize: 300 + size * 100,
+            starDensity: 0.6,
+            starLife: 3000 + size * 300,
+            glitter: 'willow',
+            glitterColor: COLOR.Gold,
+            color: INVISIBLE
+        }),
+
+        'Palm': (size = 1) => ({
+            shellSize: size,
+            color: randomColor(),
+            spreadSize: 250 + size * 75,
+            starDensity: Math.random() < 0.5 ? 0.15 : 0.4,
+            starLife: 1800 + size * 200,
+            glitter: Math.random() < 0.5 ? 'thick' : 'heavy'
+        }),
+
+        'Ring': (size = 1) => {
+            const color = randomColor();
+            const pistil = Math.random() < 0.75;
+            return {
+                shellSize: size,
+                ring: true,
+                color,
+                spreadSize: 300 + size * 100,
+                starLife: 900 + size * 200,
+                starCount: 2.2 * PI_2 * (size + 1),
+                pistil,
+                pistilColor: makePistilColor(color),
+                glitter: !pistil ? 'light' : '',
+                glitterColor: color === COLOR.Gold ? COLOR.Gold : COLOR.White
+            };
+        },
+
+        'Crossette': (size = 1) => {
+            const color = randomColor({ limitWhite: true });
+            return {
+                shellSize: size,
+                spreadSize: 300 + size * 100,
+                starLife: 750 + size * 160,
+                starLifeVariation: 0.4,
+                starDensity: 0.85,
+                color,
+                crossette: true,
+                pistil: Math.random() < 0.5,
+                pistilColor: makePistilColor(color)
+            };
+        },
+
+        'Crackle': (size = 1) => {
+            const color = Math.random() < 0.75 ? COLOR.Gold : randomColor();
+            return {
+                shellSize: size,
+                spreadSize: 380 + size * 75,
+                starDensity: 1,
+                starLife: 600 + size * 100,
+                starLifeVariation: 0.32,
+                glitter: 'light',
+                glitterColor: COLOR.Gold,
+                color,
+                crackle: true,
+                pistil: Math.random() < 0.65,
+                pistilColor: makePistilColor(color)
+            };
+        },
+
+        'Strobe': (size = 1) => {
+            const color = randomColor({ limitWhite: true });
+            return {
+                shellSize: size,
+                spreadSize: 280 + size * 92,
+                starLife: 1100 + size * 200,
+                starLifeVariation: 0.40,
+                starDensity: 1.1,
+                color,
+                glitter: 'light',
+                glitterColor: COLOR.White,
+                strobe: true,
+                strobeColor: Math.random() < 0.5 ? COLOR.White : null,
+                pistil: Math.random() < 0.5,
+                pistilColor: makePistilColor(color)
+            };
+        },
+
+        'Ghost': (size = 1) => {
+            const shell = shellTypes['Crysanthemum'](size);
+            shell.starLife *= 1.5;
+            const ghostColor = randomColor({ notColor: COLOR.White });
+            shell.streamers = true;
+            shell.color = INVISIBLE;
+            shell.secondColor = ghostColor;
+            shell.glitter = '';
+            return shell;
+        },
+
+        'Horsetail': (size = 1) => {
+            const color = randomColor();
+            return {
+                shellSize: size,
+                horsetail: true,
+                color,
+                spreadSize: 250 + size * 38,
+                starDensity: 0.9,
+                starLife: 2500 + size * 300,
+                glitter: 'medium',
+                glitterColor: Math.random() < 0.5 ? whiteOrGold() : color,
+                strobe: color === COLOR.White
+            };
+        },
+
+        'Floral': (size = 1) => ({
+            shellSize: size,
+            spreadSize: 300 + size * 120,
+            starDensity: 0.12,
+            starLife: 500 + size * 50,
+            starLifeVariation: 0.5,
+            color: Math.random() < 0.65 ? 'random' : randomColor(),
+            floral: true
+        }),
+
+        'FallingLeaves': (size = 1) => ({
+            shellSize: size,
+            color: INVISIBLE,
+            spreadSize: 300 + size * 120,
+            starDensity: 0.12,
+            starLife: 500 + size * 50,
+            starLifeVariation: 0.5,
+            glitter: 'medium',
+            glitterColor: COLOR.Gold,
+            fallingLeaves: true
+        }),
+
+        'Random': (size = 1) => {
+            const types = Object.keys(shellTypes).filter(t => t !== 'Random');
+            return shellTypes[MyMath.randomChoice(types)](size);
+        }
+    };
+
+    // ==================== SHELL CLASS ====================
+    class Shell {
+        constructor(options) {
+            Object.assign(this, options);
+            this.starLifeVariation = options.starLifeVariation || 0.125;
+            this.color = options.color || randomColor();
+            this.glitterColor = options.glitterColor || this.color;
+            
+            if (!this.starCount) {
+                const density = options.starDensity || 1;
+                const scaledSize = this.spreadSize / 54;
+                this.starCount = Math.max(6, scaledSize * scaledSize * density);
+            }
+        }
+
+        launch(posX, posY) {
+            const launchX = posX * width;
+            const launchY = height;
+            const burstY = height * 0.15 + (1 - posY) * height * 0.5;
+            
+            const launchDistance = launchY - burstY;
+            const launchVelocity = Math.pow(launchDistance * 0.04, 0.64);
+
+            const comet = Star.add(
+                launchX,
+                launchY,
+                typeof this.color === 'string' && this.color !== 'random' ? this.color : COLOR.White,
+                Math.PI,
+                launchVelocity * (this.horsetail ? 1.2 : 1),
+                launchVelocity * (this.horsetail ? 100 : 400)
+            );
+
+            comet.heavy = true;
+            comet.sparkFreq = 32;
+            comet.sparkLife = 320;
+            comet.sparkLifeVariation = 3;
+            
+            if (this.glitter === 'willow' || this.fallingLeaves) {
+                comet.sparkFreq = 20;
+                comet.sparkSpeed = 0.5;
+                comet.sparkLife = 500;
+            }
+            
+            if (this.color === INVISIBLE) {
+                comet.sparkColor = COLOR.Gold;
+            }
+
+            if (Math.random() > 0.4 && !this.horsetail) {
+                comet.secondColor = INVISIBLE;
+                comet.transitionTime = Math.pow(Math.random(), 1.5) * 700 + 500;
+            }
+
+            comet.onDeath = () => this.burst(comet.x, comet.y);
+            this.comet = comet;
+        }
+
+        burst(x, y) {
+            const speed = this.spreadSize / 96;
+            let color, sparkFreq, sparkSpeed, sparkLife;
+            let sparkLifeVariation = 0.25;
+            let onDeath = null;
+
+            // Set up effects based on shell type
+            if (this.crossette) onDeath = crossetteEffect;
+            if (this.crackle) onDeath = crackleEffect;
+            if (this.floral) onDeath = floralEffect;
+            if (this.fallingLeaves) onDeath = fallingLeavesEffect;
+
+            // Glitter settings
+            if (this.glitter === 'light') {
+                sparkFreq = 400; sparkSpeed = 0.3; sparkLife = 300; sparkLifeVariation = 2;
+            } else if (this.glitter === 'medium') {
+                sparkFreq = 200; sparkSpeed = 0.44; sparkLife = 700; sparkLifeVariation = 2;
+            } else if (this.glitter === 'heavy') {
+                sparkFreq = 80; sparkSpeed = 0.8; sparkLife = 1400; sparkLifeVariation = 2;
+            } else if (this.glitter === 'thick') {
+                sparkFreq = 16; sparkSpeed = 1.5; sparkLife = 1400; sparkLifeVariation = 3;
+            } else if (this.glitter === 'willow') {
+                sparkFreq = 120; sparkSpeed = 0.34; sparkLife = 1400; sparkLifeVariation = 3.8;
+            }
+
+            const starFactory = (angle, speedMult) => {
+                const standardInitialSpeed = this.spreadSize / 1800;
+                
+                const star = Star.add(
+                    x, y,
+                    color || randomColor(),
+                    angle,
+                    speedMult * speed,
+                    this.starLife + Math.random() * this.starLife * this.starLifeVariation,
+                    this.horsetail && this.comet ? this.comet.speedX : 0,
+                    this.horsetail && this.comet ? this.comet.speedY : -standardInitialSpeed
+                );
+
+                if (this.secondColor) {
+                    star.transitionTime = this.starLife * (Math.random() * 0.05 + 0.32);
+                    star.secondColor = this.secondColor;
+                }
+
+                if (this.strobe) {
+                    star.transitionTime = this.starLife * (Math.random() * 0.08 + 0.46);
+                    star.strobe = true;
+                    star.strobeFreq = Math.random() * 20 + 40;
+                    if (this.strobeColor) star.secondColor = this.strobeColor;
+                }
+
+                star.onDeath = onDeath;
+
+                if (this.glitter) {
+                    star.sparkFreq = sparkFreq;
+                    star.sparkSpeed = sparkSpeed;
+                    star.sparkLife = sparkLife;
+                    star.sparkLifeVariation = sparkLifeVariation;
+                    star.sparkColor = this.glitterColor;
+                    star.sparkTimer = Math.random() * star.sparkFreq;
+                }
+            };
+
+            // Create burst pattern
+            if (typeof this.color === 'string') {
+                color = this.color === 'random' ? null : this.color;
+                
+                if (this.ring) {
+                    const ringStartAngle = Math.random() * Math.PI;
+                    const ringSquash = Math.pow(Math.random(), 2) * 0.85 + 0.15;
+                    
+                    createParticleArc(0, PI_2, this.starCount, 0, angle => {
+                        const initSpeedX = Math.sin(angle) * speed * ringSquash;
+                        const initSpeedY = Math.cos(angle) * speed;
+                        const newSpeed = MyMath.pointDist(0, 0, initSpeedX, initSpeedY);
+                        const newAngle = MyMath.pointAngle(0, 0, initSpeedX, initSpeedY) + ringStartAngle;
+                        
+                        const star = Star.add(x, y, color, newAngle, newSpeed,
+                            this.starLife + Math.random() * this.starLife * this.starLifeVariation);
+                        
+                        if (this.glitter) {
+                            star.sparkFreq = sparkFreq;
+                            star.sparkSpeed = sparkSpeed;
+                            star.sparkLife = sparkLife;
+                            star.sparkLifeVariation = sparkLifeVariation;
+                            star.sparkColor = this.glitterColor;
+                            star.sparkTimer = Math.random() * star.sparkFreq;
+                        }
+                    });
+                } else {
+                    createBurst(this.starCount, starFactory);
+                }
+            } else if (Array.isArray(this.color)) {
+                color = this.color[0];
+                createBurst(this.starCount / 2, starFactory);
+                color = this.color[1];
+                createBurst(this.starCount / 2, starFactory);
+            }
+
+            // Pistil
+            if (this.pistil) {
+                const innerShell = new Shell({
+                    spreadSize: this.spreadSize * 0.5,
+                    starLife: this.starLife * 0.6,
+                    starLifeVariation: this.starLifeVariation,
+                    starDensity: 1.4,
+                    color: this.pistilColor,
+                    glitter: 'light',
+                    glitterColor: this.pistilColor === COLOR.Gold ? COLOR.Gold : COLOR.White
+                });
+                innerShell.burst(x, y);
+            }
+
+            // Streamers
+            if (this.streamers) {
+                const innerShell = new Shell({
+                    spreadSize: this.spreadSize * 0.9,
+                    starLife: this.starLife * 0.8,
+                    starLifeVariation: this.starLifeVariation,
+                    starCount: Math.floor(Math.max(6, this.spreadSize / 45)),
+                    color: COLOR.White,
+                    glitter: 'streamer'
+                });
+                innerShell.burst(x, y);
+            }
+
+            BurstFlash.add(x, y, this.spreadSize / 4);
+        }
+    }
+
+    // ==================== EFFECTS ====================
+    function crossetteEffect(star) {
+        const startAngle = Math.random() * PI_HALF;
+        createParticleArc(startAngle, PI_2, 4, 0.5, angle => {
+            Star.add(star.x, star.y, star.color, angle, Math.random() * 0.6 + 0.75, 600);
+        });
+    }
+
+    function floralEffect(star) {
+        const count = 18;
+        createBurst(count, (angle, speedMult) => {
+            Star.add(star.x, star.y, star.color, angle, speedMult * 2.4, 1000 + Math.random() * 300, star.speedX, star.speedY);
+        });
+        BurstFlash.add(star.x, star.y, 46);
+    }
+
+    function fallingLeavesEffect(star) {
+        createBurst(7, (angle, speedMult) => {
+            const newStar = Star.add(star.x, star.y, INVISIBLE, angle, speedMult * 2.4, 2400 + Math.random() * 600, star.speedX, star.speedY);
+            newStar.sparkColor = COLOR.Gold;
+            newStar.sparkFreq = 144;
+            newStar.sparkSpeed = 0.28;
+            newStar.sparkLife = 750;
+            newStar.sparkLifeVariation = 3.2;
+        });
+        BurstFlash.add(star.x, star.y, 46);
+    }
+
+    function crackleEffect(star) {
+        createParticleArc(0, PI_2, 32, 1.8, angle => {
+            Spark.add(star.x, star.y, COLOR.Gold, angle, Math.pow(Math.random(), 0.45) * 2.4, 300 + Math.random() * 200);
+        });
+    }
+
+    // ==================== PARTICLE CREATION HELPERS ====================
+    function createParticleArc(start, arcLength, count, randomness, factory) {
+        const angleDelta = arcLength / count;
+        const end = start + arcLength - angleDelta * 0.5;
+        
+        if (end > start) {
+            for (let angle = start; angle < end; angle += angleDelta) {
+                factory(angle + Math.random() * angleDelta * randomness);
+            }
+        } else {
+            for (let angle = start; angle > end; angle += angleDelta) {
+                factory(angle + Math.random() * angleDelta * randomness);
+            }
+        }
+    }
+
+    function createBurst(count, factory, startAngle = 0, arcLength = PI_2) {
+        const R = 0.5 * Math.sqrt(count / Math.PI);
+        const C = 2 * R * Math.PI;
+        const C_HALF = C / 2;
+
+        for (let i = 0; i <= C_HALF; i++) {
+            const ringAngle = i / C_HALF * PI_HALF;
+            const ringSize = Math.cos(ringAngle);
+            const partsPerFullRing = C * ringSize;
+            const partsPerArc = partsPerFullRing * (arcLength / PI_2);
+            const angleInc = PI_2 / partsPerFullRing;
+            const angleOffset = Math.random() * angleInc + startAngle;
+            const maxRandomAngleOffset = angleInc * 0.33;
+
+            for (let j = 0; j < partsPerArc; j++) {
+                const randomAngleOffset = Math.random() * maxRandomAngleOffset;
+                const angle = angleInc * j + angleOffset + randomAngleOffset;
+                factory(angle, ringSize);
+            }
+        }
+    }
+
+    // ==================== DRAW CITY ====================
+    function drawCity() {
+        const ctx = cityCtx;
+        
+        // Xóa toàn bộ canvas và tô màu đen hoàn toàn
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+
+        // Đã loại bỏ code vẽ sao, tòa nhà, cây cối...
+    }
+
+    // ==================== SKY LIGHTING ====================
+    const currentSkyColor = { r: 0, g: 0, b: 0 };
+    const targetSkyColor = { r: 0, g: 0, b: 0 };
+
+    function colorSky(speed) {
+        const maxSkySaturation = 15;
+        const maxStarCount = 500;
+        let totalStarCount = 0;
+
+        targetSkyColor.r = 0;
+        targetSkyColor.g = 0;
+        targetSkyColor.b = 0;
+
+        COLOR_CODES.forEach(color => {
+            const tuple = COLOR_TUPLES[color];
+            const count = Star.active[color].length;
+            totalStarCount += count;
+            targetSkyColor.r += tuple.r * count;
+            targetSkyColor.g += tuple.g * count;
+            targetSkyColor.b += tuple.b * count;
+        });
+
+        const intensity = Math.pow(Math.min(1, totalStarCount / maxStarCount), 0.3);
+        const maxComponent = Math.max(1, targetSkyColor.r, targetSkyColor.g, targetSkyColor.b);
+
+        targetSkyColor.r = targetSkyColor.r / maxComponent * maxSkySaturation * intensity;
+        targetSkyColor.g = targetSkyColor.g / maxComponent * maxSkySaturation * intensity;
+        targetSkyColor.b = targetSkyColor.b / maxComponent * maxSkySaturation * intensity;
+
+        const colorChange = 10;
+        currentSkyColor.r += (targetSkyColor.r - currentSkyColor.r) / colorChange * speed;
+        currentSkyColor.g += (targetSkyColor.g - currentSkyColor.g) / colorChange * speed;
+        currentSkyColor.b += (targetSkyColor.b - currentSkyColor.b) / colorChange * speed;
+
+        canvasContainer.style.backgroundColor = `rgb(${currentSkyColor.r | 0}, ${currentSkyColor.g | 0}, ${currentSkyColor.b | 0})`;
+    }
+
+    // ==================== GAME STATE ====================
+    let currentShellType = 'Random';
+    let isFinale = false;
+    let lastTime = 0;
+    let frameCount = 0;
+    let currentFrame = 0;
+    let autoLaunchTime = 0;
+
+    // ==================== UPDATE ====================
+    function update(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const frameTime = Math.min(timestamp - lastTime, 100);
+        lastTime = timestamp;
+        const speed = frameTime / 16.67;
+        const timeStep = frameTime;
+
+        currentFrame++;
+        frameCount++;
+
+        // FPS counter
+        if (frameCount % 30 === 0) {
+            document.getElementById('fps').textContent = `FPS: ${Math.round(1000 / frameTime)}`;
+        }
+
+        // Auto launch
+        autoLaunchTime -= timeStep;
+        if (autoLaunchTime <= 0) {
+            if (isFinale) {
+                for (let i = 0; i < 3; i++) {
+                    launchShell();
+                }
+                autoLaunchTime = 150;
+            } else {
+                launchShell();
+                autoLaunchTime = 800 + Math.random() * 400;
+            }
+        }
+
+        const starDrag = 1 - (1 - Star.airDrag) * speed;
+        const starDragHeavy = 1 - (1 - Star.airDragHeavy) * speed;
+        const sparkDrag = 1 - (1 - Spark.airDrag) * speed;
+        const gAcc = timeStep / 1000 * GRAVITY;
+
+        let totalParticles = 0;
+
+        // Update stars
+        COLOR_CODES_W_INVIS.forEach(color => {
+            const stars = Star.active[color];
+            totalParticles += stars.length;
+
+            for (let i = stars.length - 1; i >= 0; i--) {
+                const star = stars[i];
+                if (star.updateFrame === currentFrame) continue;
+                star.updateFrame = currentFrame;
+
+                star.life -= timeStep;
+                if (star.life <= 0) {
+                    stars.splice(i, 1);
+                    Star.returnInstance(star);
+                } else {
+                    const burnRate = Math.pow(star.life / star.fullLife, 0.5);
+                    const burnRateInverse = 1 - burnRate;
+
+                    star.prevX = star.x;
+                    star.prevY = star.y;
+                    star.x += star.speedX * speed;
+                    star.y += star.speedY * speed;
+
+                    if (!star.heavy) {
+                        star.speedX *= starDrag;
+                        star.speedY *= starDrag;
+                    } else {
+                        star.speedX *= starDragHeavy;
+                        star.speedY *= starDragHeavy;
+                    }
+                    star.speedY += gAcc;
+
+                    // Sparks
+                    if (star.sparkFreq) {
+                        star.sparkTimer -= timeStep;
+                        while (star.sparkTimer < 0) {
+                            star.sparkTimer += star.sparkFreq * 0.75 + star.sparkFreq * burnRateInverse * 4;
+                            Spark.add(
+                                star.x, star.y,
+                                star.sparkColor,
+                                Math.random() * PI_2,
+                                Math.random() * star.sparkSpeed * burnRate,
+                                star.sparkLife * 0.8 + Math.random() * star.sparkLifeVariation * star.sparkLife
+                            );
+                        }
+                    }
+
+                    // Color transition
+                    if (star.life < star.transitionTime) {
+                        if (star.secondColor && !star.colorChanged) {
+                            star.colorChanged = true;
+                            star.color = star.secondColor;
+                            stars.splice(i, 1);
+                            Star.active[star.secondColor].push(star);
+                            if (star.secondColor === INVISIBLE) {
+                                star.sparkFreq = 0;
+                            }
+                        }
+
+                        if (star.strobe) {
+                            star.visible = Math.floor(star.life / star.strobeFreq) % 3 === 0;
+                        }
+                    }
+                }
+            }
+
+            // Update sparks
+            const sparks = Spark.active[color];
+            totalParticles += sparks.length;
+
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const spark = sparks[i];
+                spark.life -= timeStep;
+                if (spark.life <= 0) {
+                    sparks.splice(i, 1);
+                    Spark.returnInstance(spark);
+                } else {
+                    spark.prevX = spark.x;
+                    spark.prevY = spark.y;
+                    spark.x += spark.speedX * speed;
+                    spark.y += spark.speedY * speed;
+                    spark.speedX *= sparkDrag;
+                    spark.speedY *= sparkDrag;
+                    spark.speedY += gAcc;
+                }
+            }
+        });
+
+        document.getElementById('particles').textContent = `Particles: ${totalParticles}`;
+
+        render(speed);
+        requestAnimationFrame(update);
+    }
+
+    // ==================== RENDER ====================
+    function render(speed) {
+        colorSky(speed);
+
+        // Trails canvas - fade effect
+        trailsCtx.globalCompositeOperation = 'source-over';
+        trailsCtx.fillStyle = `rgba(0, 0, 0, ${0.175 * speed})`;
+        trailsCtx.fillRect(0, 0, width, height);
+
+        mainCtx.clearRect(0, 0, width, height);
+
+        // Burst flashes
+        while (BurstFlash.active.length) {
+            const bf = BurstFlash.active.pop();
+            const gradient = trailsCtx.createRadialGradient(bf.x, bf.y, 0, bf.x, bf.y, bf.radius);
+            gradient.addColorStop(0.024, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.125, 'rgba(255, 160, 20, 0.2)');
+            gradient.addColorStop(0.32, 'rgba(255, 140, 20, 0.11)');
+            gradient.addColorStop(1, 'rgba(255, 120, 20, 0)');
+            trailsCtx.fillStyle = gradient;
+            trailsCtx.fillRect(bf.x - bf.radius, bf.y - bf.radius, bf.radius * 2, bf.radius * 2);
+            BurstFlash.returnInstance(bf);
+        }
+
+        trailsCtx.globalCompositeOperation = 'lighten';
+
+        // Draw stars
+        trailsCtx.lineWidth = Star.drawWidth;
+        trailsCtx.lineCap = 'round';
+        mainCtx.strokeStyle = '#fff';
+        mainCtx.lineWidth = 1;
+        mainCtx.beginPath();
+
+        COLOR_CODES.forEach(color => {
+            const stars = Star.active[color];
+            trailsCtx.strokeStyle = color;
+            trailsCtx.beginPath();
+            stars.forEach(star => {
+                if (star.visible) {
+                    trailsCtx.moveTo(star.x, star.y);
+                    trailsCtx.lineTo(star.prevX, star.prevY);
+                    mainCtx.moveTo(star.x, star.y);
+                    mainCtx.lineTo(star.x - star.speedX * 1.6, star.y - star.speedY * 1.6);
+                }
+            });
+            trailsCtx.stroke();
+        });
+        mainCtx.stroke();
+
+        // Draw sparks
+        trailsCtx.lineWidth = Spark.drawWidth;
+        trailsCtx.lineCap = 'butt';
+        COLOR_CODES.forEach(color => {
+            const sparks = Spark.active[color];
+            trailsCtx.strokeStyle = color;
+            trailsCtx.beginPath();
+            sparks.forEach(spark => {
+                trailsCtx.moveTo(spark.x, spark.y);
+                trailsCtx.lineTo(spark.prevX, spark.prevY);
+            });
+            trailsCtx.stroke();
+        });
+    }
+
+    // ==================== LAUNCH ====================
+    function launchShell() {
+        const size = 2 + Math.random() * 2;
+        const shell = new Shell(shellTypes[currentShellType](size));
+        shell.launch(0.2 + Math.random() * 0.6, 0.3 + Math.random() * 0.5);
+    }
+
+    // ==================== EVENT HANDLERS ====================
+    mainCanvas.addEventListener('mousedown', (e) => {
+        const x = e.clientX / width;
+        const y = 1 - e.clientY / height;
+        const size = 2 + Math.random() * 2;
+        const shell = new Shell(shellTypes[currentShellType](size));
+        shell.launch(x, y);
+    });
+    
+    // Add touch support for firing
+    mainCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const x = touch.clientX / width;
+        const y = 1 - touch.clientY / height;
+        const size = 2 + Math.random() * 2;
+        const shell = new Shell(shellTypes[currentShellType](size));
+        shell.launch(x, y);
+    }, {passive: false});
+
+    document.querySelectorAll('.btn[data-shell]').forEach(btn => {
+        const activate = (e) => {
+            e.stopPropagation();
+            currentShellType = btn.dataset.shell;
+            document.querySelectorAll('.btn[data-shell]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+        btn.addEventListener('click', activate);
+        btn.addEventListener('touchstart', activate, {passive: true});
+    });
+
+    const finaleBtn = document.getElementById('finale-btn');
+    const toggleFinale = (e) => {
+        e.stopPropagation();
+        isFinale = !isFinale;
+        finaleBtn.classList.toggle('active', isFinale);
+    };
+    finaleBtn.addEventListener('click', toggleFinale);
+    finaleBtn.addEventListener('touchstart', toggleFinale, {passive: true});
+
+    // ==================== INIT ====================
+    function init() {
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Set default active button
+        document.querySelector('.btn[data-shell="Random"]').classList.add('active');
+
+        // Hide loader
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            loader.style.opacity = 0;
+            setTimeout(() => loader.classList.add('hidden'), 1000);
+        }, 1000);
+
+        // Start
+        requestAnimationFrame(update);
+    }
+
+    init();
+    </script>
+</body>
+</html>
